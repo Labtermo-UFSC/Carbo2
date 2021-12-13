@@ -1,0 +1,232 @@
+esphome:
+  name: outdoorstation
+  platform: ESP32
+  board: esp-wrover-kit
+
+# Enable logging
+logger:
+
+### https://www.sparkfun.com/datasheets/Sensors/Weather/Weather%20Sensor%20Assembly..pdf
+
+
+# Enable mqtt protocol
+mqtt:
+  broker: !secret MQTT_broker
+  port: !secret MQTT_port
+  username: !secret MQTT_username
+  password: !secret MQTT_password
+
+wifi:
+  networks:
+  - ssid: !secret WIFI_ssid
+    eap:
+      username: !secret WIFI_username
+      password: !secret WIFI_password
+  - ssid: !secret WIFI_ssid
+    eap:
+      identity: !secret WIFI_identity
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "outdoorstation Fallback Hotspot"
+    password: !secret WIFI_Fallback_password
+
+captive_portal:
+
+i2c:
+  sda: 21
+  scl: 22
+
+uart:
+  rx_pin: GPIO16
+  tx_pin: GPIO17
+  baud_rate: 9600
+  id: uartMHZ
+
+sensor:
+  - platform: bmp085
+    temperature:
+      name: "Outside Temperature"
+    pressure:
+      name: "Outside Pressure"
+    update_interval: 30s
+
+  - platform: mhz19
+    uart_id: uartMHZ
+    co2:
+      name: "MH-Z19 CO2 Value"
+      id: sensorCO2
+    temperature:
+      name: "MH-Z19 Temperature"
+      id: sensorTEMP
+    update_interval: 10s
+    automatic_baseline_calibration: false
+    id: my_mhz19_id
+
+  - platform: pulse_counter
+    pin:
+      number: GPIO04
+      mode: INPUT_PULLUP
+    unit_of_measurement: 'km/h'
+    name: "Wind speed"
+    icon: 'mdi:weather-windy'
+    count_mode:
+      rising_edge: DISABLE
+      falling_edge: INCREMENT
+    internal_filter: 13us
+    update_interval: 60s
+    # rotations_per_sec = pulses / 2 / 60
+    # circ_m = 0.09 * 2 * 3.14 = 0.5652
+    # mps = 1.18 * circ_m * rotations_per_sec
+    # mps = 1.18 * 0.5652 / 2 / 60 = 0,0055578
+    # kmph = 0,0055578 * 3,6 =
+    filters:
+      - multiply: 0.02000808
+      #- sliding_window_moving_average:
+      #    window_size: 2
+      #    send_every: 1
+
+  - platform: adc
+    id: source_sensor
+    pin: GPIO34
+    name: ADC
+    attenuation: 11db
+    internal: true
+    update_interval: 5s
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.846153 # 3.9 -> 3.3V
+
+  - platform: template
+    name: "Wind heading"
+    id: wind_heading
+    unit_of_measurement: "°"
+
+  - platform: resistance
+    sensor: source_sensor
+    id: resistance_sensor
+    configuration: DOWNSTREAM
+    resistor: 10kOhm
+    internal: true
+    name: Resistance Sensor
+    reference_voltage: 3.9V
+    accuracy_decimals: 1
+    filters:
+      - median:
+          window_size: 7
+          send_every: 4
+          send_first_at: 3
+      #- heartbeat: 30s
+    on_value:
+      - logger.log:
+          format: "Valor eh de %.1f and humidity %.1f"
+          args: [ 'id(resistance_sensor).state', 'id(resistance_sensor).state' ]
+      - if:
+          condition:
+            sensor.in_range:
+              id: resistance_sensor
+              above: 13000.0
+              below: 17500.0
+          then:
+            - text_sensor.template.publish:
+                id: wind_dir_card
+                state: "N"
+            - sensor.template.publish:
+                id: wind_heading
+                state: 0.0
+      - if:
+          condition:
+            sensor.in_range:
+              id: resistance_sensor
+              above: 3000.0
+              below: 7500.0
+          then:
+            - text_sensor.template.publish:
+                id: wind_dir_card
+                state: "NE"
+            - sensor.template.publish:
+                id: wind_heading
+                state: 45.0
+      - if:
+          condition:
+            sensor.in_range:
+              id: resistance_sensor
+              above: 150.0
+              below: 650.0
+          then:
+            - text_sensor.template.publish:
+                id: wind_dir_card
+                state: "E"
+            - sensor.template.publish:
+                id: wind_heading
+                state: 90.0
+      - if:
+          condition:
+            sensor.in_range:
+              id: resistance_sensor
+              above: 1000.0
+              below: 1600.0
+          then:
+            - text_sensor.template.publish:
+                id: wind_dir_card
+                state: "SE"
+            - sensor.template.publish:
+                id: wind_heading
+                state: 135.0
+      - if:
+          condition:
+            sensor.in_range:
+              id: resistance_sensor
+              above: 2200.0
+              below: 2700.0
+          then:
+            - text_sensor.template.publish:
+                id: wind_dir_card
+                state: "S"
+            - sensor.template.publish:
+                id: wind_heading
+                state: 180.0
+      - if:
+          condition:
+            sensor.in_range:
+              id: resistance_sensor
+              above: 8700.0
+              below: 9400.0
+          then:
+            - text_sensor.template.publish:
+                id: wind_dir_card
+                state: "SW"
+            - sensor.template.publish:
+                id: wind_heading
+                state: 225.0
+      - if:
+          condition:
+            sensor.in_range:
+              id: resistance_sensor
+              above: 35500.0
+              below: 40500.0
+          then:
+            - text_sensor.template.publish:
+                id: wind_dir_card
+                state: "W"
+            - sensor.template.publish:
+                id: wind_heading
+                state: 270.0
+      - if:
+          condition:
+            sensor.in_range:
+              id: resistance_sensor
+              above: 20400.0
+              below: 29000.0
+          then:
+            - text_sensor.template.publish:
+                id: wind_dir_card
+                state: "NW"
+            - sensor.template.publish:
+                id: wind_heading
+                state: 315.0
+
+text_sensor:
+  - platform: template
+    name: "Wind cardinal direction"
+    id: wind_dir_card
