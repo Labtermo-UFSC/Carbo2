@@ -1,0 +1,75 @@
+esphome:
+  name: 0012-virgo
+  platform: ESP32
+  board: esp32dev
+
+# Enable logging
+logger:
+
+# Enable mqtt protocol
+mqtt:
+  broker: !secret MQTT_broker
+  port: !secret MQTT_port
+  username: !secret MQTT_username
+  password: !secret MQTT_password
+
+wifi:
+  networks:
+  - ssid: !secret WIFI_ssid
+    eap:
+      username: !secret WIFI_username
+      password: !secret WIFI_password
+  - ssid: !secret WIFI_ssid
+    eap:
+      identity: !secret WIFI_identity
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "0012-virgo Fallback Hotspot"
+    password: !secret WIFI_Fallback_password
+
+captive_portal:
+
+#Font for display conf
+font:
+  - file: "fonts/comic-sans-ms-4.ttf"
+    id: my_font30
+    size: 40
+  - file: "fonts/comic-sans-ms-4.ttf"
+    id: my_font10
+    size: 10
+
+# UART Conf
+uart:
+  rx_pin: GPIO16
+  tx_pin: GPIO17
+  baud_rate: 9600
+  id: uartMHZ
+
+# MHZ19/14 Conf
+sensor:
+  - platform: mhz19
+    uart_id: uartMHZ
+    co2:
+      name: "MH-Z19 CO2 Value"
+      id: sensorCO2
+    temperature:
+      name: "MH-Z19 Temperature"
+      id: sensorTEMP
+    update_interval: 10s
+    automatic_baseline_calibration: false
+    id: my_mhz19_id
+
+# I2C Conf
+i2c:
+  sda: 21
+  scl: 22
+
+# Display Conf
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    lambda: |-
+      it.print(0, 0, id(my_font10), "Sensor CO2 (ppm)");
+      it.printf(0, 10, id(my_font30), "%.0f", id(sensorCO2).state);
