@@ -1,5 +1,5 @@
 esphome:
-  name: 0015-ara
+  name: 0030-libra
   platform: ESP32
   board: esp32dev
 
@@ -25,7 +25,7 @@ wifi:
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "0015-ara Fallback Hotspot"
+    ssid: "0030-libra Fallback Hotspot"
     password: !secret WIFI_Fallback_password
 
 captive_portal:
