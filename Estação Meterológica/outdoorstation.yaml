@@ -86,6 +86,42 @@ sensor:
       #    window_size: 2
       #    send_every: 1
 
+  - platform: pulse_counter
+    pin:
+      number: GPIO02
+      mode: INPUT_PULLUP
+    unit_of_measurement: 'mm'
+    name: "Rain gauge"
+    icon: 'mdi:weather-rainy'
+    id: rain_gauge
+    internal: true
+    count_mode:
+      rising_edge: DISABLE
+      falling_edge: INCREMENT
+    internal_filter: 13us
+    update_interval: 60s
+    filters:
+      # Each 0.011" (0.2794mm) of rain causes one momentary contact closure
+      - multiply: 0.2794
+    accuracy_decimals: 4
+
+  - platform: integration
+    name: "Rainfall per min"
+    id: rain_per_min
+    time_unit: min
+    unit_of_measurement: 'mm'
+    icon: 'mdi:weather-rainy'
+    sensor: rain_gauge
+
+  - platform: total_daily_energy
+    name: "Total daily rain"
+    power_id: rain_gauge
+    unit_of_measurement: 'mm'
+    icon: 'mdi:weather-rainy'
+    # x60 To convert to aggregated rain amount
+    filters:
+      - multiply: 60
+
   - platform: adc
     id: source_sensor
     pin: GPIO34
@@ -118,15 +154,12 @@ sensor:
           send_first_at: 3
       #- heartbeat: 30s
     on_value:
-      - logger.log:
-          format: "Valor eh de %.1f and humidity %.1f"
-          args: [ 'id(resistance_sensor).state', 'id(resistance_sensor).state' ]
       - if:
           condition:
             sensor.in_range:
               id: resistance_sensor
-              above: 13000.0
-              below: 17500.0
+              above: 30000
+              below: 36000
           then:
             - text_sensor.template.publish:
                 id: wind_dir_card
@@ -138,8 +171,8 @@ sensor:
           condition:
             sensor.in_range:
               id: resistance_sensor
-              above: 3000.0
-              below: 7500.0
+              above: 7600
+              below: 8800
           then:
             - text_sensor.template.publish:
                 id: wind_dir_card
@@ -151,8 +184,8 @@ sensor:
           condition:
             sensor.in_range:
               id: resistance_sensor
-              above: 150.0
-              below: 650.0
+              above: 500
+              below: 1500
           then:
             - text_sensor.template.publish:
                 id: wind_dir_card
@@ -164,8 +197,8 @@ sensor:
           condition:
             sensor.in_range:
               id: resistance_sensor
-              above: 1000.0
-              below: 1600.0
+              above: 1600
+              below: 2800
           then:
             - text_sensor.template.publish:
                 id: wind_dir_card
@@ -177,8 +210,8 @@ sensor:
           condition:
             sensor.in_range:
               id: resistance_sensor
-              above: 2200.0
-              below: 2700.0
+              above: 3400
+              below: 4400
           then:
             - text_sensor.template.publish:
                 id: wind_dir_card
@@ -190,8 +223,8 @@ sensor:
           condition:
             sensor.in_range:
               id: resistance_sensor
-              above: 8700.0
-              below: 9400.0
+              above: 15000
+              below: 17000
           then:
             - text_sensor.template.publish:
                 id: wind_dir_card
@@ -203,8 +236,8 @@ sensor:
           condition:
             sensor.in_range:
               id: resistance_sensor
-              above: 35500.0
-              below: 40500.0
+              above: 100000
+              below: 140000
           then:
             - text_sensor.template.publish:
                 id: wind_dir_card
@@ -216,8 +249,8 @@ sensor:
           condition:
             sensor.in_range:
               id: resistance_sensor
-              above: 20400.0
-              below: 29000.0
+              above: 60000
+              below: 70000
           then:
             - text_sensor.template.publish:
                 id: wind_dir_card
@@ -230,3 +263,12 @@ text_sensor:
   - platform: template
     name: "Wind cardinal direction"
     id: wind_dir_card
+
+interval:
+  - interval: 60s
+    then:
+      - sensor.integration.reset: rain_per_min
+# Enable time component to reset energy at midnight
+time:
+  - platform: sntp
+    timezone: "America/Sao_Paulo"
