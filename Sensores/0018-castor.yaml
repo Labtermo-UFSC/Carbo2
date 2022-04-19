@@ -57,7 +57,7 @@ sensor:
       name: "MH-Z19 Temperature"
       id: sensorTEMP
     update_interval: 10s
-    automatic_baseline_calibration: false
+    automatic_baseline_calibration: true
     id: my_mhz19_id
 
 # I2C Conf
