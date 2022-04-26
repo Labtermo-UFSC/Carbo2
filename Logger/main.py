@@ -1,13 +1,15 @@
 from xml.sax import xmlreader
 from paho.mqtt import client as mqtt_client
 from threading import Thread 
+from datetime import datetime
 import time 
 import pygsheets
 import pandas as pd
 import numpy as np
 #authorization
-gc = pygsheets.authorize(service_file='C:/Users/lucas/Documents/GitHub/Carbo2/Logger/carbo2-e79fef51432f.json')
-sh = gc.open('Abacaxi')
+
+gc = pygsheets.authorize(service_file='/Users/paiva/Documents/GitHub/Carbo2/Logger/carbo2-e79fef51432f.json')
+sh = gc.open('Carbo2_2022')
 wks = sh[0]
 broker = '54.232.245.44'
 port = 1883
@@ -16,28 +18,22 @@ topics = [("0001-vega/sensor/mh-z19_co2_value/state",0), ("0002-sirius/sensor/mh
 client_id = f'python-mqtt'
 username = 'paiva404'
 password = 'Paiva123'
-sheetsInterations = 2
-sensorListRaw = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+sheetsInterations = 2 
+sensorListRaw =         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 sensorListInterations = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-sensorListCurrent = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-googleHeader = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+sensorListCurrent =     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+googleHeader =          [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
 def initSheet():
     wks.update_value('A1', "Data")
-    sensorHeader = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]]
+    sensorHeader = [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]]
     print(sensorHeader)
     wks.update_values('B1', sensorHeader)
 
 class calcAndLog(Thread): 
-    def __init__(self, seconds): 
-        '''Note that when you override __init__, you must  
-           use super() to call __init__() in the base class 
-           so you'll get all the "chocolately-goodness" of 
-           threading (i.e., the magic that sets up the thread 
-           within the OS) or it won't work. 
-        '''         
+    def __init__(self, seconds):   
         super().__init__()  
-        self.delay = seconds 
+        self.delay = seconds
         self.is_done = False 
  
     def done(self): 
@@ -47,6 +43,8 @@ class calcAndLog(Thread):
         while not self.is_done: 
             global sheetsInterations
             time.sleep(self.delay) 
+            now = datetime.now()
+            print("now =", now)
             for i in range(1, 30):
                 if sensorListInterations[i]!=0:
                     sensorListCurrent[i] = sensorListRaw[i]/sensorListInterations[i]
@@ -54,8 +52,13 @@ class calcAndLog(Thread):
                 sensorListRaw[i] = 0
                 googleHeader[0][i] = sensorListCurrent[i]
             rowName = 'B'+str(sheetsInterations)
-            sheetsInterations = sheetsInterations + 1
             wks.update_values(rowName, googleHeader)
+            timeCell = wks.cell('A'+str(sheetsInterations))
+            timeCell.value = now.strftime("%m/%d/%Y %H:%M:%S")
+            timeCell.format = pygsheets.FormatType.DATE, "mm-dd-yyyy hh:mm:ss"
+            timeCell.update()
+            sheetsInterations = sheetsInterations + 1
+            print("Sheets updated!")
         print('thread done') 
 
 def connect_mqtt():
@@ -87,7 +90,7 @@ def run():
     initSheet()
     client = connect_mqtt()
     subscribe(client)
-    t = calcAndLog(10) 
+    t = calcAndLog(10)
     t.start()
     client.loop_forever() 
 
