@@ -6,9 +6,11 @@ import time
 import pygsheets
 import pandas as pd
 import numpy as np
+import pytz
 #authorization
 
-gc = pygsheets.authorize(service_file='/Users/paiva/Documents/GitHub/Carbo2/Logger/carbo2-e79fef51432f.json')
+gc = pygsheets.authorize(service_file='/Users/paiva/Documents/GitHub/Carbo2/Logger/carbo2-key.json')
+# /home/ubuntu/CSV_Logger/carbo2-key.json
 sh = gc.open('Carbo2_2022')
 wks = sh[0]
 broker = '54.232.245.44'
@@ -23,6 +25,8 @@ sensorListRaw =         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 sensorListInterations = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 sensorListCurrent =     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 googleHeader =          [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+timeZone = pytz.timezone('America/Sao_Paulo')
+minutesToUpdate = 1
 
 def initSheet():
     wks.update_value('A1', "Data")
@@ -43,11 +47,13 @@ class calcAndLog(Thread):
         while not self.is_done: 
             global sheetsInterations
             time.sleep(self.delay) 
-            now = datetime.now()
+            now = datetime.now(timeZone)
             print("now =", now)
             for i in range(1, 30):
                 if sensorListInterations[i]!=0:
                     sensorListCurrent[i] = sensorListRaw[i]/sensorListInterations[i]
+                else:
+                    sensorListCurrent[i] = -1
                 sensorListInterations[i] = 0
                 sensorListRaw[i] = 0
                 googleHeader[0][i] = sensorListCurrent[i]
@@ -90,7 +96,8 @@ def run():
     initSheet()
     client = connect_mqtt()
     subscribe(client)
-    t = calcAndLog(10)
+    secondsToUpdate = minutesToUpdate * 60
+    t = calcAndLog(secondsToUpdate)
     t.start()
     client.loop_forever() 
 
