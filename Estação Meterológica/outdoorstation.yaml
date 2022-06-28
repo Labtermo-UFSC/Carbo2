@@ -28,7 +28,7 @@ wifi:
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "0000-outdoorstation Fallback Hotspot"
+    ssid: "Outdoorstation Fallback Hotspot"
     password: !secret WIFI_Fallback_password
 
 captive_portal:
