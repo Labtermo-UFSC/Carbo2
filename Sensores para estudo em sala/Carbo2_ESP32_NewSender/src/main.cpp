@@ -8,9 +8,23 @@ UFSC - 2022
 #include <esp_now.h>
 #include <WiFi.h>
 #include "MHZ19.h"
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
-//#define SensorNumber1
-#define SensorNumber2
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+// The pins for I2C are defined by the Wire-library. 
+// On an arduino UNO:       A4(SDA), A5(SCL)
+// On an arduino MEGA 2560: 20(SDA), 21(SCL)
+// On an arduino LEONARDO:   2(SDA),  3(SCL), ...
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#define SensorNumber1
+//#define SensorNumber2
 //#define SensorNumber3
 //#define SensorNumber4
 
@@ -70,6 +84,17 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
+void updateScreen(){
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(0,0);
+  display.println("ID: " + String(myData.id));
+  display.println("CO2: " + String(myData.ch1));
+  display.println("RAND: " + String(random(100)));
+  display.display();
+}
+
 void collectAndSendData(){
   myData.id = GlobalId;
   myData.ch1 = mhz.getCO2();
@@ -108,6 +133,17 @@ void setup() {
     esp_restart();
   }
   // Initiate timer
+
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+
+  // Show initial display buffer contents on the screen --
+  // the library initializes this with an Adafruit splash screen.
+  display.clearDisplay();
+
   timer = timerBegin(0, 80, true);
   timerAttachInterrupt(timer, &onTimer, true);
   timerAlarmWrite(timer, (1000000 * TIMERTick_Hz), true);
@@ -118,5 +154,6 @@ void loop() {
   if (timerFlag) {
     timerFlag = false;
     collectAndSendData();
+    updateScreen();
   }
 }
