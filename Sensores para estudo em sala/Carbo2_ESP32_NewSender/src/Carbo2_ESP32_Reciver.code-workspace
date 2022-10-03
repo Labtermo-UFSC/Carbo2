@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "Carbo2_ESP32_Reciver",
+			"path": "../../Carbo2_ESP32_Reciver"
+		},
+		{
+			"name": "Carbo2_ESP32_NewSender",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}
