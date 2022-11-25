@@ -7,3 +7,5 @@ Logger/carbo2-e79fef51432f.json
 Logger/carbo2-key.json
 Carbo2KeyPair_Backup.pem
 Sensores para estudo em sala/Carbo2_ESP32_NewSender/.vscode/extensions.json
+ESP32GsheetsTest/include/secrets.h
+ESP32GsheetsTest/src/main.cpp
